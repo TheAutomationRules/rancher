@@ -1,0 +1,27 @@
+# cloud-config
+ssh_authorized_keys:
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBvjCHidVvJ9rpr3FhrC4N0QH6+q2/By178lssFA3Z0z theautomationrules@gmail.com
+
+write_files:
+  - path: /etc/systemd/system/rancher.service
+    permissions: 0644
+    owner: root
+    content: |
+      [Unit]
+      Description=rancher-server as a service
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Restart=on-failure
+      RestartSec=10
+      ExecStart=/usr/bin/docker run --name %p --rm --privileged -p 80:80 -p 443:443 -e CATTLE_BOOTSTRAP_PASSWORD=admin -v /opt/rancher:/var/lib/rancher rancher/rancher:docker pull rancher/rancher:v2.6-head
+      ExecStop=-/usr/bin/docker stop -t 2 %p
+
+      [Install]
+      WantedBy=multi-user.target
+runcmd:
+  - export DEBIAN_FRONTEND=noninteractive
+  - curl -sL https://releases.rancher.com/install-docker/${docker_version}.sh | sh
+  - sudo usermod -aG docker ${username}
+  - sudo systemctl start rancher
